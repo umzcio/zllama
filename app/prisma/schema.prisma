@@ -1,0 +1,171 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Endpoint {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  engine      String   @default("ollama")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  hosts       Host[]
+  logs        Log[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  role      String   @default("user")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  logs      Log[]
+}
+
+model Log {
+  id               String   @id @default(cuid())
+  endpointId       String
+  endpointRef      Endpoint @relation(fields: [endpointId], references: [id])
+  model            String
+  endpoint         String
+  promptTokens     Int?
+  completionTokens Int?
+  latencyMs        Int
+  statusCode       Int
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id])
+  apiKeyId         String?
+  apiKey           ApiKey?  @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  ip               String?
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([endpointId, createdAt])
+  @@index([model])
+  @@index([apiKeyId])
+}
+
+model ApiKey {
+  id        String    @id @default(cuid())
+  name      String
+  key       String    @unique
+  lastUsed  DateTime?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  logs      Log[]
+}
+
+model Settings {
+  key   String @id
+  value String
+}
+
+model Host {
+  id            String    @id @default(cuid())
+  nodeName      String    @unique
+  address       String?
+  arch          String
+  os            String
+  kernel        String?
+  cpuModel      String?
+  cpuCount      Int?
+  ramTotalBytes Float?
+  converge      Boolean   @default(false)
+  approvalState String    @default("pending")
+  agentVersion  String?
+  lastCheckInAt DateTime?
+  status        String    @default("online")
+  statusDetail  String?
+  createdAt     DateTime  @default(now())
+  roleId        String?
+  role          Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  runs          ConvergenceRun[]
+  gpus          Gpu[]
+  runtimes      Runtime[]
+  models        HostModel[]
+  endpoints     Endpoint[]
+}
+
+model Gpu {
+  id                  String   @id @default(cuid())
+  hostId              String
+  host                Host     @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  index               Int
+  vendor              String
+  name                String
+  memoryTotalBytes    Float?
+  memorySource        String
+  driverVersion       String?
+  driverStatus        String   @default("ok")
+  lastUtilPct         Float?
+  lastTempC           Float?
+  lastPowerW          Float?
+  lastMemoryUsedBytes Float?
+  updatedAt           DateTime @updatedAt
+
+  @@unique([hostId, index])
+}
+
+model Runtime {
+  id             String   @id @default(cuid())
+  hostId         String
+  host           Host     @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  kind           String
+  version        String?
+  installMethod  String?
+  serviceState   String?
+  modelPath      String?
+  diskTotalBytes Float?
+  diskFreeBytes  Float?
+  lastCheckedAt  DateTime @default(now())
+
+  @@unique([hostId, kind])
+}
+
+model HostModel {
+  id          String   @id @default(cuid())
+  hostId      String
+  host        Host     @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  runtimeKind String
+  name        String
+  sizeBytes   Float?
+  digest      String?
+  managed     Boolean  @default(false)
+  lastSeenAt  DateTime @default(now())
+
+  @@unique([hostId, runtimeKind, name])
+}
+
+model Role {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  description  String?
+  desiredState String   @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  hosts        Host[]
+}
+
+model ConvergenceRun {
+  id            String    @id @default(cuid())
+  hostId        String
+  host          Host      @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  trigger       String
+  status        String    @default("running")
+  startedAt     DateTime  @default(now())
+  finishedAt    DateTime?
+  currentAction String?
+  progressPct   Float?
+  actions       String    @default("[]")
+  error         String?
+
+  @@index([hostId, startedAt])
+}

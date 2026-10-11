@@ -1,0 +1,72 @@
+# Builds zllama from source. No prebuilt images are published.
+#
+#   cd app
+#   docker compose up -d --build
+#
+# Put NEXTAUTH_SECRET (and optionally AGENT_ENROLL_TOKEN) in app/.env first —
+# see the root README.
+
+services:
+  zllama:
+    build:
+      # The repo root, not app/: the image must also carry agent/ (served by
+      # /api/agent/install and /api/agent/package) which is a sibling of app/.
+      context: ..
+      dockerfile: app/Dockerfile
+      args:
+        # Set when serving the app behind a reverse proxy at a sub-path
+        # (e.g. NEXT_PUBLIC_BASE_PATH=/zllama). Must be a build arg —
+        # Next.js bakes basePath into the client bundle.
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
+    image: zllama:local
+    ports:
+      # Loopback only by default: reachable from the host itself (e.g. a
+      # local reverse proxy that adds TLS and authentication), never from the
+      # LAN. Set HOST_BIND=0.0.0.0 to expose it on all interfaces instead —
+      # read SECURITY.md first.
+      - "${HOST_BIND:-127.0.0.1}:3000:3000"
+      # Optional second listener for fleet agents to check in on, e.g. a
+      # VPN or management-network address on this host, for setups where
+      # the browser-facing address sits behind an interactive auth layer
+      # that agents cannot pass. Defaults to a second loopback address so an
+      # unconfigured deployment gains no new exposure.
+      - "${AGENT_BIND:-127.0.0.2}:3000:3000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-file:/data/zllama.db}
+      DEFAULT_OLLAMA_URL: ${DEFAULT_OLLAMA_URL:-http://host.docker.internal:11434}
+      # Required. Generate one with: openssl rand -base64 32
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?Set NEXTAUTH_SECRET in app/.env (openssl rand -base64 32)}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      # Shared token fleet agents present when checking in. Unset means the
+      # check-in endpoint rejects everything (fails closed), so agents can
+      # enrol but never report.
+      AGENT_ENROLL_TOKEN: ${AGENT_ENROLL_TOKEN:-}
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-}
+      LOG_RETENTION_DAYS: ${LOG_RETENTION_DAYS:-90}
+      LOG_STORE_PROMPTS: ${LOG_STORE_PROMPTS:-true}
+      CATALOG_REFRESH_ENABLED: ${CATALOG_REFRESH_ENABLED:-true}
+      CATALOG_RATE_LIMIT_MS: ${CATALOG_RATE_LIMIT_MS:-2000}
+    volumes:
+      - zllama-data:/data
+    # Lets the container reach an Ollama running on the host via
+    # host.docker.internal (auto-provided on Docker Desktop; needs this
+    # mapping on Linux). Harmless where the name already resolves.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  # Optional: PostgreSQL instead of SQLite. Uncomment, pick a real password,
+  # and set DATABASE_URL=postgresql://zllama:<password>@postgres:5432/zllama
+  # postgres:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_USER: zllama
+  #     POSTGRES_PASSWORD: change-me
+  #     POSTGRES_DB: zllama
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+volumes:
+  zllama-data:
+  # postgres-data:

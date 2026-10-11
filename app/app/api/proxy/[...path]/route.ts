@@ -1,0 +1,146 @@
+import { NextRequest } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
+import { logAsync } from "@/lib/log-async";
+import { withRateLimit } from "@/lib/with-rate-limit";
+import { applyDbRateLimitConfig } from "@/lib/rate-limit";
+import { validateApiKey } from "@/lib/validate-api-key";
+import { getAdapter, assertProxyable } from "@/lib/engines";
+import type { EngineKind } from "@/lib/engines";
+
+async function proxyToOllama(req: NextRequest) {
+  let apiKeyId: string | undefined;
+  const authHeader = req.headers.get("authorization");
+  const hasApiKey =
+    authHeader?.startsWith("Bearer zl-") || authHeader?.startsWith("Bearer oa-");
+  if (hasApiKey) {
+    const { valid, keyId } = await validateApiKey(req);
+    if (!valid) {
+      logger.warn("Proxy auth failed", { ip: req.headers.get("x-forwarded-for") });
+      return new Response(JSON.stringify({ error: "Invalid or revoked API key" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    apiKeyId = keyId;
+  }
+
+  const path = req.nextUrl.pathname.replace("/api/proxy", "");
+  const serverId = req.nextUrl.searchParams.get("serverId");
+
+  logger.debug("Proxy request", { method: req.method, path, serverId });
+
+  const server = serverId
+    ? await prisma.endpoint.findUnique({ where: { id: serverId } })
+    : await prisma.endpoint.findFirst({ where: { active: true }, orderBy: { createdAt: "asc" } });
+  if (!server) {
+    logger.warn("Proxy server not found", { serverId });
+    return new Response(JSON.stringify({ error: "Server not found" }), {
+      status: 404,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  if (!server.active) {
+    logger.warn("Proxy request to inactive server", { serverId, name: server.name });
+    return new Response(JSON.stringify({ error: "Server is inactive" }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const adapter = getAdapter(server.engine as EngineKind);
+  if (!assertProxyable(adapter.proxyablePaths, path)) {
+    logger.warn("Proxy path not allowed", { path, engine: adapter.kind });
+    return new Response(
+      JSON.stringify({ error: "Path not allowed for this engine" }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  const startTime = Date.now();
+  let body: string | null = null;
+  let model = "unknown";
+  let endpoint = path;
+
+  if (req.method === "POST" || req.method === "PUT") {
+    body = await req.text();
+    try {
+      const parsed = JSON.parse(body);
+      if (parsed.model) model = parsed.model;
+    } catch {
+      // not JSON
+    }
+  }
+
+  const ollamaUrl = `${server.url}${path}`;
+  const bodySize = body ? body.length : 0;
+  logger.info("Proxy forwarding", { method: req.method, ollamaUrl, model, server: server.name, bodyBytes: bodySize });
+
+  try {
+    const ollamaRes = await fetch(ollamaUrl, {
+      method: req.method,
+      headers: { "Content-Type": "application/json" },
+      ...(body ? { body } : {}),
+    });
+
+    const latencyMs = Date.now() - startTime;
+    const statusCode = ollamaRes.status;
+
+    if (statusCode >= 400) {
+      logger.warn("Proxy upstream error", { ollamaUrl, statusCode, latencyMs, model });
+    } else {
+      logger.debug("Proxy response", { ollamaUrl, statusCode, latencyMs });
+    }
+
+    logAsync({
+      endpointId: server.id,
+      model,
+      endpoint,
+      latencyMs,
+      statusCode,
+      apiKeyId: apiKeyId ?? null,
+      ip: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || null,
+    });
+
+    const responseBody = ollamaRes.body;
+    return new Response(responseBody, {
+      status: statusCode,
+      headers: {
+        "Content-Type": ollamaRes.headers.get("Content-Type") || "application/json",
+      },
+    });
+  } catch (err) {
+    const latencyMs = Date.now() - startTime;
+    const message = err instanceof Error ? err.message : "Proxy error";
+
+    logger.error("Proxy connection failed", { ollamaUrl, error: message, latencyMs, model });
+
+    logAsync({
+      endpointId: server.id,
+      model,
+      endpoint,
+      latencyMs,
+      statusCode: 502,
+      apiKeyId: apiKeyId ?? null,
+    });
+
+    return new Response(JSON.stringify({ error: message }), {
+      status: 502,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
+function withDbRateLimit(handler: (req: NextRequest, ctx: unknown) => Promise<Response>) {
+  const limited = withRateLimit(handler);
+  return async (req: NextRequest, ctx: unknown) => {
+    await applyDbRateLimitConfig();
+    return limited(req, ctx);
+  };
+}
+
+export const GET = withDbRateLimit(proxyToOllama);
+export const POST = withDbRateLimit(proxyToOllama);
+export const PUT = withDbRateLimit(proxyToOllama);
+export const DELETE = withDbRateLimit(proxyToOllama);

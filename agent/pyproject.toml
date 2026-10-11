@@ -1,0 +1,18 @@
+[project]
+name = "zllama-agent"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["PyYAML>=6.0"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# The agent/ directory also ships systemd/ (the unit file) and install.sh
+# alongside the zllama_agent/ package, so setuptools' flat-layout
+# auto-discovery sees two top-level candidates and refuses to guess. Declare
+# the installable package explicitly; systemd/ and install.sh keep shipping
+# in the served tarball (agent/pyproject.toml only controls what `pip
+# install` puts in the wheel), they just aren't installed as Python packages.
+[tool.setuptools]
+packages = ["zllama_agent"]

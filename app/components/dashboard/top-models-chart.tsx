@@ -1,0 +1,67 @@
+import { Package } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Tooltip } from "@/components/ui/tooltip";
+
+interface ModelEntry {
+  model: string;
+  count: number;
+}
+
+interface TopModelsChartProps {
+  data: ModelEntry[];
+  label: string;
+  labelRequests: string;
+  labelNoData?: string;
+}
+
+function TopModelsChart({ data, label, labelRequests, labelNoData }: TopModelsChartProps) {
+  const max = Math.max(...data.map((d) => d.count), 1);
+
+  return (
+    <Card className="flex flex-col gap-3" role="list" aria-label={label}>
+      <p className="text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
+        {label}
+      </p>
+
+      {data.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <Package className="h-10 w-10 text-[hsl(var(--muted-foreground)/0.5)]" />
+          <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">{labelNoData ?? "No data yet"}</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {data.map((entry) => {
+            const pct = Math.round((entry.count / max) * 100);
+            const shortName =
+              entry.model.length > 22 ? entry.model.slice(0, 20) + "…" : entry.model;
+            return (
+              <div key={entry.model} role="listitem" className="flex flex-col gap-1">
+                <div className="flex justify-between text-xs">
+                  <Tooltip content={entry.model}>
+                    <span className="font-mono font-medium truncate">{shortName}</span>
+                  </Tooltip>
+                  <span className="text-[hsl(var(--muted-foreground))] tabular-nums ml-2 flex-shrink-0">
+                    {entry.count} {labelRequests}
+                  </span>
+                </div>
+                <div className="h-1.5 w-full rounded-full bg-[hsl(var(--muted))]">
+                  <div
+                    className="h-1.5 rounded-full bg-[hsl(var(--primary))] transition-all duration-500"
+                    style={{ width: `${pct}%` }}
+                    aria-valuenow={entry.count}
+                    aria-valuemin={0}
+                    aria-valuemax={max}
+                    role="progressbar"
+                    aria-label={entry.model}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+export { TopModelsChart, type ModelEntry };

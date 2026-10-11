@@ -1,0 +1,186 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 150 10% 96%;
+    --foreground: 192 12% 8%;
+    --muted: 150 8% 91%;
+    --muted-foreground: 201 10% 34%;
+    --border: 168 6% 52%;
+    --primary: 147 73% 22%;
+    --primary-foreground: 0 0% 100%;
+    --destructive: 6 59% 44%;
+    --destructive-foreground: 0 0% 98%;
+    --accent: 150 8% 91%;
+    --accent-foreground: 192 12% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 192 12% 8%;
+    --sidebar: 200 15% 19%;
+    --sidebar-foreground: 198 10% 75%;
+    --sidebar-border: 200 15% 27%;
+    --ring: 145 63% 33%;
+    --success: 147 73% 22%;
+    --success-foreground: 0 0% 100%;
+    --warning: 36 71% 42%;
+
+    --grade-s: 271 55% 40%;
+    --grade-a: 217 75% 38%;
+    --grade-b: 145 70% 25%;
+    --grade-c: 35 90% 28%;
+    --grade-d: 22 85% 33%;
+    --grade-f: 6 65% 36%;
+
+    --density-spacing-xs: 0.25rem;
+    --density-spacing-sm: 0.5rem;
+    --density-spacing-md: 0.75rem;
+    --density-spacing-lg: 1rem;
+    --density-spacing-xl: 1.5rem;
+    --density-text-sm: 0.8125rem;
+    --density-text-base: 0.875rem;
+    --density-row-height: 2.5rem;
+  }
+
+  .dark {
+    --background: 198 19% 11%;
+    --foreground: 165 10% 92%;
+    --muted: 197 17% 16%;
+    --muted-foreground: 195 10% 68%;
+    --border: 198 14% 42%;
+    --primary: 146 59% 40%;
+    --primary-foreground: 192 12% 8%;
+    --destructive: 5 56% 60%;
+    --destructive-foreground: 192 12% 8%;
+    --accent: 197 17% 16%;
+    --accent-foreground: 165 10% 92%;
+    --card: 198 17% 15%;
+    --card-foreground: 165 10% 92%;
+    --sidebar: 200 20% 9%;
+    --sidebar-foreground: 198 10% 75%;
+    --sidebar-border: 198 14% 23%;
+    --ring: 146 59% 40%;
+    --success: 146 59% 40%;
+    --success-foreground: 192 12% 8%;
+    --warning: 37 65% 57%;
+
+    --grade-s: 271 75% 78%;
+    --grade-a: 217 85% 72%;
+    --grade-b: 142 50% 62%;
+    --grade-c: 43 80% 62%;
+    --grade-d: 28 85% 66%;
+    --grade-f: 5 75% 72%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading), var(--font-sans), sans-serif;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  .skip-nav {
+    position: absolute;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .skip-nav:focus {
+    position: fixed;
+    top: 0.5rem;
+    left: 0.5rem;
+    width: auto;
+    height: auto;
+    padding: 0.5rem 1rem;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-radius: 0.375rem;
+    z-index: 9999;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+}
+
+@keyframes animate-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-in {
+  animation: animate-in 0.2s ease-out;
+}
+
+.slide-in-from-right {
+  animation: animate-in 0.2s ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.15s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.2s ease-out;
+}
+
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+.dark .shiki,
+.dark .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: transparent !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

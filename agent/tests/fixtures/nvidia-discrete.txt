@@ -1,0 +1,2 @@
+0, NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition, 97887 MiB, 8431 MiB, 88820 MiB, 0 %, 46, 10.45 W, 595.84
+1, NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition, 97887 MiB, 4296 MiB, 92952 MiB, 0 %, 50, 17.52 W, 595.84

@@ -1,0 +1,22 @@
+# The app image is built from the repo root (see app/docker-compose.yml) so
+# that agent/ — served by /api/agent/install and /api/agent/package — ships
+# inside the image. Keep the context small anyway.
+.git
+.github
+docs
+prototype
+**/node_modules
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/*.md
+**/.env*
+!app/.env.example
+app/.next
+app/coverage
+app/e2e
+agent/.venv
+agent/venv
+agent/.venv*
+**/*.egg-info

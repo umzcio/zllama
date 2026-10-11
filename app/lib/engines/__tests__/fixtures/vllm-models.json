@@ -1,0 +1,14 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "nemotron-3-super",
+      "object": "model",
+      "created": 1787281978,
+      "owned_by": "vllm",
+      "root": "/model",
+      "parent": null,
+      "max_model_len": 65536
+    }
+  ]
+}
