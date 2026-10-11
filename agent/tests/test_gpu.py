@@ -3,6 +3,8 @@
 import pathlib
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from zllama_agent.gpu import collect_gpus
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures"
@@ -10,6 +12,14 @@ FIXTURES = pathlib.Path(__file__).parent / "fixtures"
 
 def fixture(name):
     return (FIXTURES / name).read_text()
+
+
+@pytest.fixture(autouse=True)
+def nvidia_smi_present():
+    # collect_gpus() bails out early when nvidia-smi is not on PATH, so pretend it
+    # is; subprocess.run is mocked per test. The no-binary test overrides this.
+    with patch("shutil.which", return_value="/usr/bin/nvidia-smi"):
+        yield
 
 
 def run_result(stdout="", returncode=0, stderr=""):
