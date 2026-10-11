@@ -42,5 +42,4 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt -e .
   commit `.env` files, databases or credentials.
 
 By contributing you agree that your contributions are licensed under the MIT
-License (see [LICENSE](LICENSE)) and that you follow the
-[Code of Conduct](CODE_OF_CONDUCT.md).
+License (see [LICENSE](LICENSE)).
