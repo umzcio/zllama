@@ -7,6 +7,8 @@ metrics, an API-key gateway in front of them, and — optionally — a small
 per-host agent that reports hardware/GPU inventory and can converge hosts
 toward a declared role.
 
+![zllama dashboard: endpoint health, VRAM per GPU node, and models loaded in VRAM](docs/images/dashboard.png)
+
 ## Status: unmaintained, provided as-is
 
 **The original author no longer runs zllama and does not maintain it.** The
